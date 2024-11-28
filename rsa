@@ -1,0 +1,115 @@
+import java.math.BigInteger;
+import java.security.SecureRandom;
+import java.util.Scanner;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
+public class RSALogging {
+
+    // Logger per tracciare l'esecuzione
+    private static final Logger logger = Logger.getLogger(RSALogging.class.getName());
+
+    public static void main(String[] args) {
+        logger.setLevel(Level.ALL);
+
+        logger.info("Inizio generazione delle chiavi RSA.");
+        KeyPair keyPair = generateRSAKeyPair();
+        logger.info("Generazione delle chiavi RSA completata.");
+        logger.info("Chiave pubblica: " + keyPair.getPublicKey());
+        logger.info("Chiave privata: " + keyPair.getPrivateKey());
+
+        Scanner scanner = new Scanner(System.in);
+        System.out.print("Inserisci un messaggioda cryptare e decryptare: ");
+        String message = scanner.nextLine();
+
+        logger.info("Messaggio da cifrare: " + message);
+
+        BigInteger encryptedMessage = encrypt(message, keyPair.getPublicKey(), keyPair.getN());
+        logger.info("Messaggio cifrato: " + encryptedMessage);
+
+        String decryptedMessage = decrypt(encryptedMessage, keyPair.getPrivateKey(), keyPair.getN());
+        logger.info("Messaggio decifrato: " + decryptedMessage);
+
+        scanner.close();
+    }
+
+    public static KeyPair generateRSAKeyPair() {
+        SecureRandom random = new SecureRandom();
+
+        logger.info("Generazione di p e q.");
+        BigInteger p = generatePrime(512, random);
+        BigInteger q = generatePrime(512, random);
+        logger.info("Numero primo p: " + p);
+        logger.info("Numero primo q: " + q);
+
+        BigInteger n = p.multiply(q);
+        logger.info("Calcolo di n (n = p * q): " + n);
+
+        BigInteger phi = p.subtract(BigInteger.ONE).multiply(q.subtract(BigInteger.ONE));
+        logger.info("Calcolo di φ(n): " + phi);
+
+        BigInteger e = BigInteger.valueOf(65537);
+        logger.info("Scelta dell'esponente pubblico e: " + e);
+
+        BigInteger d = e.modInverse(phi);
+        logger.info("Calcolo dell'esponente privato d: " + d);
+
+        KeyPair keyPair = new KeyPair(n, e, d);
+        return keyPair;
+    }
+
+    // Funzione per generare un numero primo di lunghezza bit specificata
+    public static BigInteger generatePrime(int bitLength, SecureRandom random) {
+        BigInteger prime;
+        do {
+            prime = new BigInteger(bitLength, random);
+        } while (!prime.isProbablePrime(100));
+        return prime;
+    }
+
+    // Funzione di cifratura del messaggio con la chiave pubblica
+    public static BigInteger encrypt(String message, BigInteger publicKey, BigInteger n) {
+        BigInteger messageBigInt = new BigInteger(message.getBytes());
+        // Cifratura con la formula c = m^e mod n
+        return messageBigInt.modPow(publicKey, n);
+    }
+
+    // Funzione di decifratura del messaggio con la chiave privata
+    public static String decrypt(BigInteger encryptedMessage, BigInteger privateKey, BigInteger n) {
+        // Decifratura con la formula m = c^d mod n
+        BigInteger decryptedBigInt = encryptedMessage.modPow(privateKey, n);
+        byte[] decryptedBytes = decryptedBigInt.toByteArray();
+
+        // Rimuovere i byte di padding
+        int paddingLength = decryptedBytes[0] == 0 ? 1 : 0;
+        byte[] actualMessageBytes = new byte[decryptedBytes.length - paddingLength];
+        System.arraycopy(decryptedBytes, paddingLength, actualMessageBytes, 0, actualMessageBytes.length);
+
+        return new String(actualMessageBytes);
+    }
+
+
+    static class KeyPair {
+        private BigInteger n;
+        private BigInteger publicKey;
+        private BigInteger privateKey;
+
+        public KeyPair(BigInteger n, BigInteger publicKey, BigInteger privateKey) {
+            this.n = n;
+            this.publicKey = publicKey;
+            this.privateKey = privateKey;
+        }
+
+        public BigInteger getPublicKey() {
+            return publicKey;
+        }
+
+        public BigInteger getPrivateKey() {
+            return privateKey;
+        }
+
+        public BigInteger getN() {
+            return n;
+        }
+    }
+}
